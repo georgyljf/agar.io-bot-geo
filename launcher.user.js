@@ -2,7 +2,7 @@
 // @name        Launcher
 // @namespace   AposLauncher
 // @include     http://agar.io/
-// @version     2.2
+// @version     2.6
 // @grant       none
 // @author      http://www.twitch.tv/apostolique
 // ==/UserScript==
@@ -14,6 +14,21 @@ Number.prototype.mod = function(n) {
 Array.prototype.peek = function() {
     return this[this.length-1];
 }
+
+$.get('https://raw.githubusercontent.com/Apostolique/Agar.io-bot/master/launcher.user.js', function(data) {
+	var latestVersion = data.replace(/(\r\n|\n|\r)/gm,"");
+	latestVersion = latestVersion.substring(latestVersion.indexOf("// @version")+11,latestVersion.indexOf("// @grant"));
+    
+	latestVersion = parseFloat(latestVersion);
+    var myVersion = parseFloat(GM_info.script.version); 
+	
+	if(latestVersion > myVersion)
+	{
+		alert("Update Available for launcher.user.js: V" + latestVersion + "\nGet the latest version from the GitHub page.");
+        window.open('https://github.com/Apostolique/Agar.io-bot/blob/master/launcher.user.js','_blank');
+	}
+	console.log('Current launcher.user.js Version: ' + myVersion + " on Github: " + latestVersion);
+});
 
 console.log("Running Bot Launcher!");
 (function (h, f) {
@@ -190,7 +205,7 @@ console.log("Running Bot Launcher!");
       },
       success: function (a) {
         a = a.split('\n');
-        '45.79.222.79:443' == a[0] ? pa()  : Ha('ws://' + a[0])
+        Ha('ws://' + a[0], a[1])
       },
       dataType: 'text',
       method: 'POST',
@@ -202,7 +217,7 @@ console.log("Running Bot Launcher!");
   function W() {
     la && v && (f('#connecting').show(), pa())
   }
-  function Ha(a) {
+  function Ha(a, hash) {
     if (r) {
       r.onopen = null;
       r.onmessage = null;
@@ -213,9 +228,10 @@ console.log("Running Bot Launcher!");
       }
       r = null
     }
-    var c = h.location.search.slice(1);
-    /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+$/.test(c) && (a = 'ws://' + c);
-    Va && (a = a.split(':'), a = a[0] + 's://ip-' + a[1].replace(/\./g, '-').replace(/\//g, '') + '.tech.agar.io:' + ( + a[2] + 2000));
+    if (Va) {
+      var d = a.split(':');
+      a = d[0] + 's://ip-' + d[1].replace(/\./g, '-').replace(/\//g, '') + '.tech.agar.io:' + ( + d[2] + 2000)
+    }
     F = [
     ];
     m = [
@@ -235,7 +251,27 @@ console.log("Running Bot Launcher!");
     serverIP = a;
     r = new WebSocket(a);
     r.binaryType = 'arraybuffer';
-    r.onopen = Wa;
+    r.onopen = function() {
+      var a;
+      aa = 500;
+      f('#connecting').hide();
+      console.log('socket open');
+      a = N(5);
+      a.setUint8(0, 254);
+      a.setUint32(1, 4, !0);
+      O(a);
+      a = N(5);
+      a.setUint8(0, 255);
+      a.setUint32(1, 154669859, !0);
+      O(a);
+      a = N(1 + hash.length);
+      a.setUint8(0, 80);
+      for (var c = 0; c < hash.length; ++c) {
+        a.setUint8(c + 1, hash.charCodeAt(c));
+      }
+      O(a);
+      Ia()
+    }
     r.onmessage = Xa;
     r.onclose = Ya;
     r.onerror = function () {
@@ -247,21 +283,6 @@ console.log("Running Bot Launcher!");
   }
   function O(a) {
     r.send(a.buffer)
-  }
-  function Wa() {
-    var a;
-    aa = 500;
-    f('#connecting').hide();
-    console.log('socket open');
-    a = N(5);
-    a.setUint8(0, 254);
-    a.setUint32(1, 4, !0);
-    O(a);
-    a = N(5);
-    a.setUint8(0, 255);
-    a.setUint32(1, 673720361, !0);
-    O(a);
-    Ia()
   }
   function Ya() {
     console.log('socket close');
@@ -485,9 +506,19 @@ console.log("Running Bot Launcher!");
   function K() {
 
     //UPDATE
-    if (getPlayer().length == 0) {
-        setNick(originalName);
+    if (getPlayer().length == 0 && !reviving) {
+        apos('send', 'pageview');
     }
+    
+    if (getPlayer().length == 0) {
+        console.log("Revive");
+        setNick(originalName);
+        reviving = true;
+    } else if (getPlayer().length > 0 && reviving) {
+        reviving = false;
+    }
+
+
 
     var a;
     if (ua()) {
@@ -884,13 +915,15 @@ console.log("Running Bot Launcher!");
   dArc = [],
   dText = [],
   lines = [],
-  originalName = "[BR]GeoLJF",
+  names = ["[BR]GeoLJF"],
+  originalName = names[Math.floor(Math.random() * names.length)],
   sessionScore = 0,
   serverIP = "",
   interNodes = [],
   lifeTimer = new Date(),
   bestTime = 0,
   botIndex = 0,
+  reviving = false,
 
   ma,
   e,
@@ -1784,3 +1817,10 @@ console.log("Running Bot Launcher!");
     h.onload = Sa
   }
 }) (window, window.jQuery);
+
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','apos');
+
+apos('create', 'UA-64394184-1', 'auto');
